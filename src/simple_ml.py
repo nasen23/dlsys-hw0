@@ -20,7 +20,7 @@ def add(x, y):
         Sum of x + y
     """
     ### BEGIN YOUR CODE
-    pass
+    return x + y
     ### END YOUR CODE
 
 
@@ -48,7 +48,25 @@ def parse_mnist(image_filename, label_filename):
                 for MNIST will contain the values 0-9.
     """
     ### BEGIN YOUR CODE
-    pass
+    with gzip.open(image_filename) as image_file:
+        header = image_file.read(16)
+        magic, size, rows, cols = struct.unpack(">iiii", header)
+        if magic != 2051:
+            raise ValueError("Invalid magic number for image file")
+        image_file.seek(16)
+        pixels = image_file.read(size * rows * cols)
+        pixels = np.frombuffer(pixels, dtype=np.uint8).reshape((size, rows * cols))
+        X = pixels.astype(np.float32) / 255
+    with gzip.open(label_filename) as label_file:
+        header = label_file.read(8)
+        magic, size = struct.unpack(">ii", header)
+        if magic != 2049:
+            raise ValueError("Invalid magic number for label file")
+        label_file.seek(8)
+        labels = label_file.read(size)
+        labels = np.frombuffer(labels, dtype=np.uint8)
+        y = labels
+    return X, y
     ### END YOUR CODE
 
 
@@ -68,7 +86,7 @@ def softmax_loss(Z, y):
         Average softmax loss over the sample.
     """
     ### BEGIN YOUR CODE
-    pass
+    return np.average(np.log(np.sum(np.exp(Z), axis=1)) - Z[np.arange(len(Z)), y])
     ### END YOUR CODE
 
 
@@ -91,7 +109,15 @@ def softmax_regression_epoch(X, y, theta, lr = 0.1, batch=100):
         None
     """
     ### BEGIN YOUR CODE
-    pass
+    for i in range(0, len(X), batch):
+        X_batch = X[i:i+batch]
+        y_batch = y[i:i+batch]
+        Y = np.exp(X_batch.dot(theta))
+        Z = Y / np.sum(Y, axis=1).reshape(-1, 1)
+        I_y = np.zeros(Z.shape)
+        I_y[np.arange(len(Z)), y_batch] = 1
+        g = (X_batch.T.dot(Z - I_y)) / len(X_batch)
+        theta -= lr * g
     ### END YOUR CODE
 
 
@@ -118,7 +144,21 @@ def nn_epoch(X, y, W1, W2, lr = 0.1, batch=100):
         None
     """
     ### BEGIN YOUR CODE
-    pass
+    def ReLU(x: np.ndarray):
+        return np.maximum(x, 0, x)
+    for i in range(0, len(X), batch):
+        X_batch = X[i:i+batch]
+        y_batch = y[i:i+batch]
+        Z1 = ReLU(X_batch.dot(W1))
+        tmp = np.exp(Z1.dot(W2))
+        I_y = np.zeros(tmp.shape)
+        I_y[np.arange(len(tmp)), y_batch] = 1
+        G2 = tmp / np.sum(tmp, axis=1).reshape((-1, 1)) - I_y
+        G1 = (Z1 > 0) * (G2.dot(W2.T))
+        W1_g = X_batch.T.dot(G1) / len(X_batch)
+        W2_g = Z1.T.dot(G2) / len(X_batch)
+        W1 -= lr * W1_g
+        W2 -= lr * W2_g
     ### END YOUR CODE
 
 
